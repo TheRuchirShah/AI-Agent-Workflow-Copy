@@ -1,19 +1,28 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Upload, FileText, CheckCircle2, X, Send } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Label } from "./ui/label";
 
 interface UploadBriefProps {
-  onSubmit?: (data: { file: File | null; briefText: string }) => void;
+  onSubmit?: (data: {
+    file: File | null;
+    projectName: string;
+    shortInfo: string;
+    briefText: string;
+  }) => void;
 }
 
 export function UploadBrief({ onSubmit }: UploadBriefProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [projectName, setProjectName] = useState("");
+  const [shortInfo, setShortInfo] = useState("");
   const [briefText, setBriefText] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,12 +54,22 @@ export function UploadBrief({ onSubmit }: UploadBriefProps) {
   };
 
   const handleSubmit = () => {
-    if (uploadedFile || briefText.trim()) {
-      onSubmit?.({ file: uploadedFile, briefText });
+    const isProjectNameMissing = !projectName.trim();
+    const isShortInfoMissing = !shortInfo.trim();
+    const isBriefTooShort = briefText.trim().length < 500;
+
+    setShowValidationErrors(true);
+    if (isProjectNameMissing || isShortInfoMissing || isBriefTooShort) {
+      return;
     }
+
+    onSubmit?.({ file: uploadedFile, projectName: projectName.trim(), shortInfo: shortInfo.trim(), briefText: briefText.trim() });
   };
 
-  const canSubmit = uploadedFile || briefText.trim();
+  const trimmedBriefLength = briefText.trim().length;
+  const projectNameError = showValidationErrors && !projectName.trim();
+  const shortInfoError = showValidationErrors && !shortInfo.trim();
+  const briefTextError = showValidationErrors && trimmedBriefLength < 500;
 
   return (
     <Card className="border-2 border-dashed border-primary/30 bg-gradient-to-br from-card to-muted/20">
@@ -65,6 +84,62 @@ export function UploadBrief({ onSubmit }: UploadBriefProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="project-name">Project Name</Label>
+            <Input
+              id="project-name"
+              placeholder="e.g. Customer onboarding workflow"
+              value={projectName}
+              onChange={(event) => setProjectName(event.target.value)}
+              aria-invalid={projectNameError}
+              aria-describedby={projectNameError ? "project-name-error" : undefined}
+            />
+            {projectNameError && (
+              <p id="project-name-error" role="alert" className="text-sm text-destructive">
+                Enter a project name to continue.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="project-short-info">Short Project Info</Label>
+            <Textarea
+              id="project-short-info"
+              placeholder="In a sentence or two, what should this project accomplish?"
+              value={shortInfo}
+              onChange={(event) => setShortInfo(event.target.value)}
+              aria-invalid={shortInfoError}
+              aria-describedby={shortInfoError ? "project-short-info-error" : undefined}
+              className="min-h-[72px] resize-y text-sm"
+            />
+            {shortInfoError && (
+              <p id="project-short-info-error" role="alert" className="text-sm text-destructive">
+                Add a short project summary to continue.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Text Input Area */}
+        <div className="space-y-2">
+          <Label htmlFor="brief-text">Additional Brief Details</Label>
+          <Textarea
+            id="brief-text"
+            placeholder="Provide additional context, requirements, constraints, or specific instructions for the AI agents..."
+            value={briefText}
+            onChange={(e) => {
+              setBriefText(e.target.value);
+            }}
+            aria-invalid={briefTextError}
+            aria-describedby={briefTextError ? "brief-character-count brief-validation-error" : "brief-character-count"}
+            className="min-h-[120px] resize-none font-mono text-sm"
+          />
+          <p id="brief-character-count" className="text-xs text-muted-foreground">
+            {trimmedBriefLength}/500 characters minimum
+          </p>
+        </div>
+
         {/* File Upload Area */}
         {!uploadedFile ? (
           <div
@@ -127,31 +202,20 @@ export function UploadBrief({ onSubmit }: UploadBriefProps) {
           </div>
         )}
 
-        {/* Text Input Area */}
-        <div className="space-y-2">
-          <Label htmlFor="brief-text">Additional Brief Details (Optional)</Label>
-          <Textarea
-            id="brief-text"
-            placeholder="Provide additional context, requirements, constraints, or specific instructions for the AI agents..."
-            value={briefText}
-            onChange={(e) => setBriefText(e.target.value)}
-            className="min-h-[120px] resize-none font-mono text-sm"
-          />
-          <p className="text-xs text-muted-foreground">
-            {briefText.length} characters
-          </p>
-        </div>
-
         {/* Submit Button */}
         <Button
           onClick={handleSubmit}
-          disabled={!canSubmit}
           className="w-full"
           size="lg"
         >
           <Send className="h-4 w-4 mr-2" />
           Submit Brief & Start Pipeline
         </Button>
+        {briefTextError && (
+          <p id="brief-validation-error" role="alert" className="text-sm text-destructive">
+            Come on, you must have something interesting to describe your great idea.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

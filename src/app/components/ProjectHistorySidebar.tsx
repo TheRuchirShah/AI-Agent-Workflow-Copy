@@ -26,6 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { toast } from "sonner";
 
 interface ProjectVersion {
   id: string;
@@ -81,10 +82,23 @@ const mockProjects: ProjectVersion[] = [
 
 interface ProjectHistorySidebarProps {
   onViewAllProjects?: () => void;
+  onOpenProject?: (project: ProjectVersion) => void;
 }
 
-export function ProjectHistorySidebar({ onViewAllProjects }: ProjectHistorySidebarProps) {
+export function ProjectHistorySidebar({ onViewAllProjects, onOpenProject }: ProjectHistorySidebarProps) {
   const [open, setOpen] = useState(false);
+
+  const downloadBlueprint = (project: ProjectVersion) => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(project, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${project.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-${project.version}-blueprint.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success(`Blueprint download started for ${project.name}`);
+  };
 
   const statusConfig = {
     completed: {
@@ -155,11 +169,14 @@ export function ProjectHistorySidebar({ onViewAllProjects }: ProjectHistorySideb
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => {
+                          onOpenProject?.(project);
+                          if (onOpenProject) setOpen(false);
+                        }}>
                           <Eye className="h-4 w-4 mr-2" />
                           Open Project
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => downloadBlueprint(project)}>
                           <Download className="h-4 w-4 mr-2" />
                           Download Blueprint
                         </DropdownMenuItem>

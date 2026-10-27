@@ -8,7 +8,7 @@ import { AutomationModeDialog } from "./components/AutomationModeDialog";
 import { PhaseProgressStepper } from "./components/PhaseProgressStepper";
 import { ProjectHistorySidebar } from "./components/ProjectHistorySidebar";
 import { SettingsDialog } from "./components/SettingsDialog";
-import { AllProjectsPage } from "./components/AllProjectsPage";
+import { AllProjectsPage, Project } from "./components/AllProjectsPage";
 import { initialPipelineData } from "./data/pipelineData";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Separator } from "./components/ui/separator";
@@ -17,13 +17,26 @@ import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
 
 export default function App() {
+  const [submittedBrief, setSubmittedBrief] = useState<{
+    projectName: string;
+    shortInfo: string;
+    briefText: string;
+    file: File | null;
+  } | null>(null);
   const [currentView, setCurrentView] = useState<"projects" | "pipeline">("projects");
   const [showModeDialog, setShowModeDialog] = useState(false);
   const [automationMode, setAutomationMode] = useState<"human" | "ai" | null>(null);
   const [pipelineStarted, setPipelineStarted] = useState(false);
+  const [activeProject, setActiveProject] = useState<Project | null>(null);
 
-  const handleBriefSubmit = (data: { file: File | null; briefText: string }) => {
+  const handleBriefSubmit = (data: {
+    file: File | null;
+    projectName: string;
+    shortInfo: string;
+    briefText: string;
+  }) => {
     console.log("Brief submitted:", data);
+    setSubmittedBrief(data);
     setShowModeDialog(true);
   };
 
@@ -35,9 +48,18 @@ export default function App() {
   };
 
   const handleNewProject = () => {
+    setActiveProject(null);
+    setSubmittedBrief(null);
     setCurrentView("pipeline");
     setPipelineStarted(false);
     setAutomationMode(null);
+  };
+
+  const handleOpenProject = (project: Project) => {
+    setActiveProject(project);
+    setPipelineStarted(true);
+    setAutomationMode(project.status === "completed" ? "ai" : "human");
+    setCurrentView("pipeline");
   };
 
   const handleBackToProjects = () => {
@@ -47,7 +69,10 @@ export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       {currentView === "projects" ? (
-        <AllProjectsPage onNewProject={handleNewProject} />
+        <AllProjectsPage
+          onNewProject={handleNewProject}
+          onOpenProject={handleOpenProject}
+        />
       ) : (
         <div className="h-screen flex flex-col bg-background">
           {/* Header */}
@@ -67,15 +92,22 @@ export default function App() {
                     <Workflow className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <h1 className="font-medium tracking-tight">AI Design Pipeline</h1>
+                    <h1 className="font-medium tracking-tight">
+                      {activeProject?.name ?? submittedBrief?.projectName ?? "AI Workflow"}
+                    </h1>
                     <p className="text-xs text-muted-foreground font-mono">
-                      Sequential Waterfall • 19 Agents • 8 Phases
+                      {activeProject
+                        ? `${activeProject.version} • ${activeProject.phases.completed}/${activeProject.phases.total} phases • ${activeProject.status}`
+                        : submittedBrief?.shortInfo ?? "Sequential Waterfall • 19 Agents • 8 Phases"}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <SettingsDialog />
-                  <ProjectHistorySidebar onViewAllProjects={handleBackToProjects} />
+                  <ProjectHistorySidebar
+                    onViewAllProjects={handleBackToProjects}
+                    onOpenProject={handleOpenProject}
+                  />
                   <ThemeToggle />
                 </div>
               </div>
@@ -88,6 +120,28 @@ export default function App() {
               <div className="space-y-8">
                 {/* Upload Section */}
                 <UploadBrief onSubmit={handleBriefSubmit} />
+
+                {submittedBrief && (
+                  <section
+                    aria-label="Submitted project brief"
+                    className="rounded-lg border border-border bg-card p-4 sm:p-6 space-y-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h2 className="font-semibold">Project brief received</h2>
+                      <span className="text-sm text-muted-foreground">
+                        Mode: {automationMode === "ai" ? "AI autonomous" : automationMode === "human" ? "Human interaction" : "Choose mode"}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{submittedBrief.shortInfo}</p>
+                    <details className="text-sm">
+                      <summary className="cursor-pointer font-medium">Review the details provided</summary>
+                      <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{submittedBrief.briefText}</p>
+                      {submittedBrief.file && (
+                        <p className="mt-2 text-muted-foreground">Attached: {submittedBrief.file.name}</p>
+                      )}
+                    </details>
+                  </section>
+                )}
 
                 {/* Progress Stepper */}
                 {pipelineStarted && (
@@ -131,6 +185,7 @@ export default function App() {
           <AutomationModeDialog
             open={showModeDialog}
             onSelect={handleModeSelect}
+            onClose={() => setShowModeDialog(false)}
           />
         </div>
       )}

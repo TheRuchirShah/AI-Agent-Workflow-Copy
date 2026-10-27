@@ -9,22 +9,36 @@ import {
 } from "./ui/alert-dialog";
 import { Bot, UserCircle } from "lucide-react";
 import { Button } from "./ui/button";
+import { X } from "lucide-react";
 
 interface AutomationModeDialogProps {
   open: boolean;
   onSelect: (mode: "human" | "ai") => void;
+  onClose: () => void;
 }
 
-export function AutomationModeDialog({ open, onSelect }: AutomationModeDialogProps) {
+export function AutomationModeDialog({ open, onSelect, onClose }: AutomationModeDialogProps) {
   return (
-    <AlertDialog open={open}>
+    <AlertDialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <AlertDialogContent className="max-w-2xl">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-2xl">Choose Pipeline Execution Mode</AlertDialogTitle>
+          <AlertDialogTitle className="pr-8 text-lg">Choose Pipeline Execution Mode</AlertDialogTitle>
           <AlertDialogDescription className="text-base">
             Select how you want the AI agents to proceed through the pipeline
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Close execution mode dialog"
+          title="Close"
+          onClick={onClose}
+          className="absolute right-3 top-3 h-8 w-8"
+        >
+          <X className="h-4 w-4" />
+        </Button>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
           {/* Human Interaction Mode */}
