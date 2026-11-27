@@ -31,7 +31,7 @@ export function MasterBlueprint({ compiled, agentDocs, phaseSummaries }: MasterB
               <Badge variant="secondary" className="mb-3 font-mono tracking-wider">
                 FINAL TERMINAL
               </Badge>
-              <CardTitle className="text-3xl mb-2">Master Project Blueprint</CardTitle>
+              <CardTitle className="mb-2 text-2xl sm:text-3xl">Master Project Blueprint</CardTitle>
               <CardDescription className="text-base">
                 Comprehensive knowledge graph compiling all agent logic and phase summaries
               </CardDescription>
@@ -73,7 +73,7 @@ export function MasterBlueprint({ compiled, agentDocs, phaseSummaries }: MasterB
                     Includes full traceability from initial brief through final deliverables.
                   </p>
                   {compiled && (
-                    <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 mb-4">
+                    <div className="flex items-center gap-2 text-sm text-primary mb-4">
                       <CheckCircle2 className="h-4 w-4" />
                       <span className="font-medium">Compilation Complete</span>
                     </div>

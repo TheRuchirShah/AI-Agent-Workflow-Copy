@@ -156,7 +156,7 @@ export function GeneralSettings() {
         </Card>
 
         {/* Save Button */}
-        <div className="sticky bottom-0 bg-background/95 backdrop-blur-sm border-t border-border py-4 -mx-6 px-6">
+        <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/95 px-4 py-4 backdrop-blur-sm sm:-mx-6 sm:px-6">
           <Button onClick={handleSave} size="lg" className="w-full">
             <Save className="h-4 w-4 mr-2" />
             Save General Settings

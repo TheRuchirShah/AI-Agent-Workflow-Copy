@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
@@ -7,7 +7,6 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ThemeToggle } from "./ThemeToggle";
 import { ProjectHistorySidebar } from "./ProjectHistorySidebar";
-import { SettingsDialog } from "./SettingsDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +29,8 @@ import {
   List,
   Filter,
   SortAsc,
-  Workflow,
+  Settings,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { initialPipelineData } from "../data/pipelineData";
+import { AgentStatus } from "../types/pipeline";
 
 export interface Project {
   id: string;
@@ -57,9 +58,23 @@ export interface Project {
     total: number;
   };
   description?: string;
+  briefText?: string;
+  discoverySummary?: string;
+  attachmentName?: string;
+  workflowMode?: "human" | "ai";
+  runControl?: "running" | "paused" | "stopped" | "awaiting-approval";
+  agentStatuses?: Record<string, AgentStatus>;
 }
 
 type SortOption = "lastModified" | "createdAt" | "name" | "progress";
+const PROJECT_INFO_MAX_LENGTH = 56;
+
+function getProjectSummary(project: Project) {
+  const summary = project.description || project.briefText || "No project description provided.";
+  return summary.length > PROJECT_INFO_MAX_LENGTH
+    ? `${summary.slice(0, PROJECT_INFO_MAX_LENGTH - 1)}…`
+    : summary;
+}
 
 const mockProjects: Project[] = [
   {
@@ -144,13 +159,52 @@ const mockProjects: Project[] = [
   },
 ];
 
+const PROJECTS_STORAGE_KEY = "design-studio-projects";
+
+export function loadProjects(): Project[] {
+  try {
+    const stored = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    if (stored) {
+      const parsed: unknown = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed as Project[];
+    }
+  } catch {
+    // Fall back to the bundled sample projects when storage is unavailable.
+  }
+  return mockProjects;
+}
+
+export function saveProjectRecord(project: Project) {
+  const projects = loadProjects();
+  const existingIndex = projects.findIndex((item) => item.id === project.id);
+  const nextProjects = [...projects];
+  if (existingIndex === -1) nextProjects.unshift(project);
+  else nextProjects[existingIndex] = project;
+  try {
+    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(nextProjects));
+    window.dispatchEvent(new Event("design-studio-projects-updated"));
+  } catch {
+    // The current session still remains usable if local storage is full or disabled.
+  }
+}
+
+function saveProjects(projects: Project[]) {
+  try {
+    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(projects));
+  } catch {
+    // Keep in-memory project changes even when persistence is unavailable.
+  }
+}
+
 interface AllProjectsPageProps {
   onNewProject: () => void;
   onOpenProject: (project: Project) => void;
+  onOpenSettings: () => void;
+  onOpenAbout: () => void;
 }
 
-export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPageProps) {
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+export function AllProjectsPage({ onNewProject, onOpenProject, onOpenSettings, onOpenAbout }: AllProjectsPageProps) {
+  const [projects, setProjects] = useState<Project[]>(loadProjects);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "in-progress" | "draft">("all");
@@ -158,19 +212,27 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
   const [projectPendingDelete, setProjectPendingDelete] = useState<Project | null>(null);
   const [deleteConfirmStep, setDeleteConfirmStep] = useState<"initial" | "final">("initial");
 
+  useEffect(() => saveProjects(projects), [projects]);
+
+  useEffect(() => {
+    const refreshProjects = () => setProjects(loadProjects());
+    window.addEventListener("design-studio-projects-updated", refreshProjects);
+    return () => window.removeEventListener("design-studio-projects-updated", refreshProjects);
+  }, []);
+
   const statusConfig = {
     completed: {
-      color: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+      color: "bg-secondary text-secondary-foreground border-border",
       icon: CheckCircle2,
       label: "Completed",
     },
     "in-progress": {
-      color: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+      color: "bg-secondary text-secondary-foreground border-border",
       icon: Clock,
       label: "In Progress",
     },
     draft: {
-      color: "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20",
+      color: "bg-secondary text-secondary-foreground border-border",
       icon: FolderOpen,
       label: "Draft",
     },
@@ -221,6 +283,9 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
       name: `${project.name} Copy ${copyNumber}`,
       version: "v1.0",
       status: "draft",
+      phases: { completed: 0, total: project.phases.total },
+      runControl: "paused",
+      agentStatuses: undefined,
       createdAt: today,
       lastModified: today,
     };
@@ -259,6 +324,8 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
   };
 
   const getProjectStage = (project: Project) => {
+    if (project.runControl === "paused") return "Paused · Ready to resume";
+    if (project.runControl === "stopped") return "Stopped · Ready to resume";
     if (project.phases.completed >= project.phases.total) return "Workflow complete";
     if (project.status === "draft" && project.phases.completed === 0) return "Draft · Not started";
 
@@ -277,19 +344,19 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
     const progressPercentage = (project.phases.completed / project.phases.total) * 100;
 
     return (
-      <Card key={project.id} className="group hover:border-primary/50 hover:shadow-md transition-all">
-        <CardHeader>
+      <Card key={project.id} className="group gap-0 transition-all hover:border-primary/50 hover:bg-slate-100 hover:shadow-md">
+        <CardHeader className="p-6 pb-0">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="truncate mb-1">{project.name}</CardTitle>
-              <CardDescription className="line-clamp-2">{project.description}</CardDescription>
+            <div className="min-w-0 flex-1 space-y-4">
+              <CardTitle className="truncate text-lg font-bold">{project.name}</CardTitle>
+              <CardDescription className="line-clamp-2 text-sm font-normal leading-relaxed">{getProjectSummary(project)}</CardDescription>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -316,43 +383,35 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className="font-mono text-xs">
-                {project.version}
-              </Badge>
-              <Badge variant="outline" className={`text-xs ${config.color}`}>
-                <StatusIcon className="h-3 w-3 mr-1" />
-                {config.label}
-              </Badge>
-            </div>
-
-            <div className="rounded-md border border-border bg-muted/30 px-3 py-2">
-              <div className="text-[11px] uppercase text-muted-foreground">Current stage</div>
-              <div className="text-sm font-medium">{getProjectStage(project)}</div>
+        <CardContent className="space-y-4 p-6 pt-0">
+            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="text-sm font-medium uppercase text-muted-foreground">Current stage</div>
+                <Badge variant="outline" className={`shrink-0 text-xs ${config.color}`}>
+                  <StatusIcon className="mr-1 h-3 w-3" />
+                  {project.runControl === "paused" ? "Paused" : project.runControl === "stopped" ? "Stopped" : config.label}
+                </Badge>
+              </div>
+              <div className="mt-2 font-semibold leading-snug">{getProjectStage(project)}</div>
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
                 <span>Progress</span>
-                <span className="font-mono">
-                  {project.phases.completed}/{project.phases.total} phases
-                </span>
+                <span>{project.phases.completed}/{project.phases.total} Phases</span>
               </div>
-              <div className="w-full bg-muted rounded-full h-2">
+              <div className="h-2.5 w-full rounded-full bg-muted">
                 <div
-                  className="bg-primary h-2 rounded-full transition-all"
+                  className="h-2.5 rounded-full bg-primary transition-all"
                   style={{ width: `${progressPercentage}%` }}
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span>Created {project.createdAt}</span>
               <span>Updated {project.lastModified}</span>
             </div>
-          </div>
         </CardContent>
       </Card>
     );
@@ -364,12 +423,12 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
     const progressPercentage = (project.phases.completed / project.phases.total) * 100;
 
     return (
-      <Card key={project.id} className="group hover:border-primary/50 transition-all">
-        <CardContent className="p-4">
+      <Card key={project.id} className="group gap-0 transition-all hover:border-primary/50 hover:bg-slate-100">
+        <CardContent className="p-6">
           <div className="flex items-center gap-4">
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex items-center gap-3">
-                <h3 className="font-medium truncate">{project.name}</h3>
+            <div className="min-w-0 flex-1 space-y-4">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h3 className="truncate text-lg font-bold">{project.name}</h3>
                 <Badge variant="outline" className="font-mono text-xs">
                   {project.version}
                 </Badge>
@@ -378,7 +437,7 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
                   {config.label}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2">{project.description}</p>
+              <p className="line-clamp-2 text-sm font-normal text-muted-foreground">{getProjectSummary(project)}</p>
               <p className="text-xs text-muted-foreground">
                 Current stage: <span className="font-medium text-foreground">{getProjectStage(project)}</span>
               </p>
@@ -386,7 +445,7 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
 
             <div className="hidden md:flex items-center gap-8">
               <div className="w-48">
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                <div className="mb-1 flex items-center justify-between text-xs font-semibold text-muted-foreground">
                   <span>Progress</span>
                   <span className="font-mono">
                     {project.phases.completed}/{project.phases.total}
@@ -411,7 +470,7 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -443,24 +502,31 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/10 rounded-lg p-2 border border-primary/20">
-                <Workflow className="h-6 w-6 text-primary" />
+        <div className="container mx-auto px-4 py-3 sm:py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 w-full items-center gap-2 sm:w-auto sm:gap-3">
+              <div className="rounded-lg p-2">
+                <span className="material-symbols-rounded text-[24px] leading-none text-primary" aria-hidden="true">shapes</span>
               </div>
-              <div>
-                <h1 className="font-medium tracking-tight">AI Design Pipeline</h1>
+              <div className="min-w-0">
+                <h1 className="font-medium tracking-tight">Design Studio</h1>
                 <p className="text-xs text-muted-foreground font-mono">
-                  Sequential Waterfall • 19 Agents • 8 Phases
+                  From dreams to design
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <SettingsDialog />
+            <div className="flex w-full shrink-0 items-center justify-end gap-1 sm:w-auto sm:gap-2">
+              <Button variant="outline" size="sm" onClick={onOpenAbout} className="gap-2 px-2 sm:px-3" aria-label="About Design Studio" title="About">
+                <Info className="h-4 w-4" />
+                <span className="hidden sm:inline">About</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={onOpenSettings} className="gap-2 px-2 sm:px-3" aria-label="Settings" title="Settings">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </Button>
               <ProjectHistorySidebar onOpenProject={onOpenProject} />
               <ThemeToggle />
             </div>
@@ -470,23 +536,16 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
 
       {/* Sub-header */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="container mx-auto px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
+        <div className="container mx-auto px-4 py-5 sm:px-6 sm:py-6">
+          <div className="mb-5 flex flex-col gap-4 sm:mb-6 lg:mb-0 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+            <div className="min-w-0 shrink-0">
               <h2 className="font-semibold tracking-tight mb-1">All Projects</h2>
               <p className="text-sm text-muted-foreground">
                 Manage and view all your design pipeline projects
               </p>
             </div>
-            <Button className="gap-2" onClick={onNewProject}>
-              <Plus className="h-4 w-4" />
-              New Project
-            </Button>
-          </div>
-
-          {/* Search and Filters */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1 max-w-md">
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 sm:gap-3 lg:flex-nowrap lg:justify-end">
+            <div className="relative w-full sm:w-64 sm:flex-none lg:w-[clamp(16rem,24vw,28rem)]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search projects..."
@@ -497,7 +556,7 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="flex-none gap-1.5 px-2 sm:gap-2 sm:px-3">
                   <Filter className="h-4 w-4" />
                   Filter
                 </Button>
@@ -519,9 +578,12 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="min-w-0 flex-none gap-1.5 px-2 sm:gap-2 sm:px-3">
                   <SortAsc className="h-4 w-4" />
-                  {sortLabels[sortOption]}
+                  <span className="hidden sm:inline">{sortLabels[sortOption]}</span>
+                  <span className="sm:hidden">
+                    {sortOption === "lastModified" ? "Modified" : sortOption === "createdAt" ? "Created" : sortOption === "name" ? "Name" : "Progress"}
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -549,40 +611,47 @@ export function AllProjectsPage({ onNewProject, onOpenProject }: AllProjectsPage
                 <List className="h-4 w-4" />
               </Button>
             </div>
+            <Button className="w-full gap-2 sm:w-auto" onClick={onNewProject}>
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1">
-        <div className="container mx-auto px-6 py-6">
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="container mx-auto px-4 py-5 sm:px-6 sm:py-6">
           <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)} className="space-y-6">
-            <TabsList>
-              <TabsTrigger value="all">
+            <div className="-mx-1 overflow-x-auto pb-1">
+            <TabsList className="w-max max-w-none justify-start sm:w-fit">
+              <TabsTrigger className="flex-none" value="all">
                 All
                 <Badge variant="secondary" className="ml-2">
                   {projectsByStatus.all}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="in-progress">
+              <TabsTrigger className="flex-none" value="in-progress">
                 In Progress
                 <Badge variant="secondary" className="ml-2">
                   {projectsByStatus["in-progress"]}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="completed">
+              <TabsTrigger className="flex-none" value="completed">
                 Completed
                 <Badge variant="secondary" className="ml-2">
                   {projectsByStatus.completed}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="draft">
+              <TabsTrigger className="flex-none" value="draft">
                 Draft
                 <Badge variant="secondary" className="ml-2">
                   {projectsByStatus.draft}
                 </Badge>
               </TabsTrigger>
             </TabsList>
+            </div>
 
             <TabsContent value={statusFilter} className="m-0">
               {filteredProjects.length === 0 ? (

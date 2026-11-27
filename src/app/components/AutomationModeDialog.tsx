@@ -20,7 +20,7 @@ interface AutomationModeDialogProps {
 export function AutomationModeDialog({ open, onSelect, onClose }: AutomationModeDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
-      <AlertDialogContent className="max-w-2xl">
+      <AlertDialogContent className="max-h-[85dvh] max-w-2xl overflow-y-auto p-4 sm:p-6">
         <AlertDialogHeader>
           <AlertDialogTitle className="pr-8 text-lg">Choose Pipeline Execution Mode</AlertDialogTitle>
           <AlertDialogDescription className="text-base">
@@ -44,7 +44,7 @@ export function AutomationModeDialog({ open, onSelect, onClose }: AutomationMode
           {/* Human Interaction Mode */}
           <button
             onClick={() => onSelect("human")}
-            className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-6 text-left transition-all hover:border-primary hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-4 text-left transition-all hover:border-primary hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring sm:p-6"
           >
             <div className="flex flex-col items-center text-center gap-4">
               <div className="bg-primary/10 rounded-full p-4 group-hover:bg-primary/20 transition-colors">
@@ -65,7 +65,7 @@ export function AutomationModeDialog({ open, onSelect, onClose }: AutomationMode
           {/* AI Autonomous Mode */}
           <button
             onClick={() => onSelect("ai")}
-            className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-6 text-left transition-all hover:border-primary hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring"
+            className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-4 text-left transition-all hover:border-primary hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring sm:p-6"
           >
             <div className="flex flex-col items-center text-center gap-4">
               <div className="bg-primary/10 rounded-full p-4 group-hover:bg-primary/20 transition-colors">

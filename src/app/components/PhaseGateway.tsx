@@ -36,31 +36,22 @@ export function PhaseGateway({ phaseId, phaseName, agentCount, compiled, timing 
       <div className="relative z-10 max-w-3xl mx-auto">
         <Card className="border-2 border-primary/30 bg-gradient-to-br from-card to-muted/30 shadow-xl">
           <CardHeader className="text-center pb-4">
-            <div className="flex items-center justify-between mb-2">
-              {/* Left spacer */}
-              <div className="w-32" />
-
-              {/* Center badge */}
-              <div className="flex items-center justify-center gap-2">
-                <div className="h-1 w-12 bg-primary/30 rounded-full" />
+            <div className="mb-2 flex flex-wrap items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                <div className="h-1 w-4 rounded-full bg-primary/30 sm:w-12" />
                 <Badge variant="secondary" className="font-mono">
                   PHASE {phaseId} GATEWAY
                 </Badge>
-                <div className="h-1 w-12 bg-primary/30 rounded-full" />
+                <div className="h-1 w-4 rounded-full bg-primary/30 sm:w-12" />
               </div>
-
-              {/* Right timing info */}
               {timing?.duration && (
-                <div className="w-32 flex justify-end">
-                  <Badge variant="outline" className="font-mono text-xs gap-1">
-                    <Clock className="h-3 w-3" />
-                    {timing.duration}
-                  </Badge>
-                </div>
+                <Badge variant="outline" className="gap-1 font-mono text-xs">
+                  <Clock className="h-3 w-3" />
+                  {timing.duration}
+                </Badge>
               )}
-              {!timing?.duration && <div className="w-32" />}
             </div>
-            <CardTitle className="text-xl">{phaseName}</CardTitle>
+            <CardTitle className="break-words text-base sm:text-xl">{phaseName}</CardTitle>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -71,7 +62,7 @@ export function PhaseGateway({ phaseId, phaseName, agentCount, compiled, timing 
                 <span className="font-mono font-medium">{agentCount}</span>
               </div>
               {compiled && (
-                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-1.5 text-primary">
                   <CheckCircle2 className="h-4 w-4" />
                   <span className="font-medium">Compiled</span>
                 </div>
@@ -93,7 +84,7 @@ export function PhaseGateway({ phaseId, phaseName, agentCount, compiled, timing 
                   )}
                   {timing.completedAt && (
                     <div className="flex items-start gap-2 bg-muted/30 rounded p-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
                       <div>
                         <div className="text-muted-foreground mb-0.5">Completed</div>
                         <div className="font-mono">{formatTimestamp(timing.completedAt)}</div>

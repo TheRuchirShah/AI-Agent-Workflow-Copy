@@ -62,12 +62,12 @@ export function PhaseProgressStepper({ phases, currentPhaseId }: PhaseProgressSt
                       {/* Step Circle */}
                       <div className="relative z-10">
                         {status === "completed" ? (
-                          <div className="bg-emerald-500 rounded-full p-1.5">
-                            <CheckCircle2 className="h-5 w-5 text-white" />
+                          <div className="bg-secondary rounded-full p-1.5">
+                            <CheckCircle2 className="h-5 w-5 text-secondary-foreground" />
                           </div>
                         ) : status === "in-progress" ? (
-                          <div className="bg-amber-500 rounded-full p-1.5 animate-pulse">
-                            <Clock className="h-5 w-5 text-white" />
+                          <div className="bg-primary rounded-full p-1.5 animate-pulse">
+                            <Clock className="h-5 w-5 text-primary-foreground" />
                           </div>
                         ) : (
                           <div className="bg-muted border-2 border-border rounded-full p-1.5">
@@ -92,7 +92,7 @@ export function PhaseProgressStepper({ phases, currentPhaseId }: PhaseProgressSt
                       <div
                         className={`absolute top-[14px] left-1/2 w-full h-0.5 -z-0 ${
                           status === "completed"
-                            ? "bg-emerald-500"
+                            ? "bg-secondary"
                             : "bg-border"
                         }`}
                       />

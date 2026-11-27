@@ -61,9 +61,9 @@ export function AgentConfigurationSettings({ embedded = false }: AgentConfigurat
   const selectedAgent = allAgents.find((a) => a.id === selectedAgentId);
 
   return (
-    <div className="h-full">
+    <div className="h-full min-h-0">
       {!selectedAgentId ? (
-        <div className="h-full flex flex-col gap-4">
+        <div className="flex h-full min-h-0 flex-col gap-4">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -76,7 +76,7 @@ export function AgentConfigurationSettings({ embedded = false }: AgentConfigurat
           </div>
 
           {/* Agent List */}
-          <ScrollArea className="flex-1">
+          <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-6">
               {/* Group by phase */}
               {Array.from(new Set(filteredAgents.map((a) => a.phaseId))).map((phaseId) => {
@@ -110,7 +110,7 @@ export function AgentConfigurationSettings({ embedded = false }: AgentConfigurat
                                       {agent.id}
                                     </Badge>
                                     {hasConfig && (
-                                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                      <CheckCircle2 className="h-4 w-4 text-primary" />
                                     )}
                                   </div>
                                   <CardTitle className="text-base">{agent.name}</CardTitle>
@@ -118,7 +118,7 @@ export function AgentConfigurationSettings({ embedded = false }: AgentConfigurat
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedAgentId(agent.id);
@@ -144,7 +144,7 @@ export function AgentConfigurationSettings({ embedded = false }: AgentConfigurat
           </ScrollArea>
         </div>
       ) : (
-        <div className="h-full flex flex-col">
+        <div className="flex h-full min-h-0 flex-col">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-medium">Configure {selectedAgent?.name}</h3>
@@ -157,7 +157,7 @@ export function AgentConfigurationSettings({ embedded = false }: AgentConfigurat
             </Button>
           </div>
 
-          <ScrollArea className="flex-1">
+          <ScrollArea className="min-h-0 flex-1">
             <AgentConfigForm
               config={getAgentConfig(selectedAgentId, selectedAgent?.name || "")}
               onSave={handleSaveConfig}

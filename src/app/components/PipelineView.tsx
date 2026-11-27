@@ -8,9 +8,10 @@ import { ArrowDown } from "lucide-react";
 interface PipelineViewProps {
   phases: Phase[];
   automationMode?: "human" | "ai";
+  discoveryContext?: string;
 }
 
-export function PipelineView({ phases, automationMode = "human" }: PipelineViewProps) {
+export function PipelineView({ phases, automationMode = "human", discoveryContext }: PipelineViewProps) {
   return (
     <div className="space-y-8">
       {phases.map((phase, phaseIdx) => (
@@ -24,12 +25,12 @@ export function PipelineView({ phases, automationMode = "human" }: PipelineViewP
 
             <Card className="border-2 border-muted bg-muted/10">
               <CardHeader className="bg-muted/30 border-b border-border">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
                     <Badge variant="secondary" className="font-mono text-sm px-3 py-1">
                       PHASE {phase.id}
                     </Badge>
-                    <CardTitle className="text-xl">{phase.name}</CardTitle>
+                    <CardTitle className="break-words text-base sm:text-xl">{phase.name}</CardTitle>
                   </div>
                   <Badge variant="outline" className="font-mono">
                     {phase.agents.length} Agents
@@ -38,6 +39,16 @@ export function PipelineView({ phases, automationMode = "human" }: PipelineViewP
               </CardHeader>
 
               <CardContent className="pt-6">
+                {phase.id === 1 && discoveryContext && (
+                  <details className="mb-6 border-b border-border pb-4">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      Approved discovery context for Phase 1
+                    </summary>
+                    <pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/30 p-4 font-sans text-sm text-muted-foreground">
+                      {discoveryContext}
+                    </pre>
+                  </details>
+                )}
                 <div className="space-y-4">
                   {phase.agents.map((agent, agentIdx) => (
                     <div key={agent.id} className="relative">

@@ -50,21 +50,21 @@ export function AgentCard({ agent, onApprove, automationMode = "human" }: AgentC
   const statusConfig = {
     locked: {
       icon: Lock,
-      color: "bg-slate-500 dark:bg-slate-600",
-      textColor: "text-slate-700 dark:text-slate-400",
-      borderColor: "border-slate-300 dark:border-slate-700"
+      color: "bg-muted",
+      textColor: "text-muted-foreground",
+      borderColor: "border-border"
     },
     "in-progress": {
       icon: Clock,
-      color: "bg-amber-500 dark:bg-amber-600",
-      textColor: "text-amber-700 dark:text-amber-400",
-      borderColor: "border-amber-400 dark:border-amber-600"
+      color: "bg-primary",
+      textColor: "text-primary",
+      borderColor: "border-primary/40"
     },
     completed: {
       icon: CheckCircle2,
-      color: "bg-emerald-500 dark:bg-emerald-600",
-      textColor: "text-emerald-700 dark:text-emerald-400",
-      borderColor: "border-emerald-400 dark:border-emerald-600"
+      color: "bg-secondary",
+      textColor: "text-secondary-foreground",
+      borderColor: "border-border"
     }
   };
 

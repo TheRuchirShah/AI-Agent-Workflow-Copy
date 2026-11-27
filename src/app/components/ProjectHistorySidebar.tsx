@@ -102,15 +102,15 @@ export function ProjectHistorySidebar({ onViewAllProjects, onOpenProject }: Proj
 
   const statusConfig = {
     completed: {
-      color: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+      color: "bg-secondary text-secondary-foreground border-border",
       icon: CheckCircle2,
     },
     "in-progress": {
-      color: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+      color: "bg-primary/10 text-primary border-primary/20",
       icon: Clock,
     },
     draft: {
-      color: "bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20",
+      color: "bg-muted text-muted-foreground border-border",
       icon: FolderOpen,
     },
   };
@@ -118,7 +118,7 @@ export function ProjectHistorySidebar({ onViewAllProjects, onOpenProject }: Proj
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2 px-2 sm:px-3" aria-label="Project history" title="Project history">
           <History className="h-4 w-4" />
           <span className="hidden sm:inline">Project History</span>
         </Button>
@@ -133,7 +133,7 @@ export function ProjectHistorySidebar({ onViewAllProjects, onOpenProject }: Proj
 
         <Separator />
 
-        <ScrollArea className="h-[calc(100vh-120px)]">
+        <ScrollArea className="h-[calc(100dvh-120px)]">
           <div className="px-6 py-4 space-y-4">
             {mockProjects.map((project) => {
               const config = statusConfig[project.status];
@@ -163,7 +163,7 @@ export function ProjectHistorySidebar({ onViewAllProjects, onOpenProject }: Proj
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-8 w-8 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </Button>
